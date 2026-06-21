@@ -43,5 +43,5 @@
 **Files:**
 - Run: `npm test`
 - Run: `npm run build`
-- Run: `rg -n "—|–" README.md DEPLOYMENT.md docs src server package.json .github || true`
+- Run a punctuation scan across README, DEPLOYMENT, docs, src, server, package files, and GitHub workflow files.
 - Commit all changes with `git commit -m "feat: add judge demo mode"`.

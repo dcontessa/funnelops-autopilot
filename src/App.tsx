@@ -1,11 +1,14 @@
 import {
   Activity,
+  ChevronLeft,
+  ChevronRight,
   CheckCircle2,
   Clock3,
   Database,
   GitBranch,
   Inbox,
   MessageSquareText,
+  PlayCircle,
   Send,
   ShieldCheck,
   Siren,
@@ -50,6 +53,93 @@ const statusLabel: Record<Lead["status"], string> = {
   rejected: "Rejected"
 };
 
+type DemoTarget = "inbox" | "lead" | "memory" | "approval" | "trace" | "usage" | "advisor" | "proof";
+
+type DemoStep = {
+  id: number;
+  label: string;
+  title: string;
+  detail: string;
+  target: DemoTarget;
+  cue: string;
+};
+
+const demoSteps: DemoStep[] = [
+  {
+    id: 1,
+    label: "Lead",
+    title: "Start with messy inbound demand",
+    detail:
+      "Show the WhatsApp-style lead. It has real buying intent, pricing risk, and follow-up pain.",
+    target: "inbox",
+    cue: "This is the moment solo sellers lose revenue, not because demand is missing, but because context is scattered."
+  },
+  {
+    id: 2,
+    label: "Qwen",
+    title: "Run Qwen Cloud reasoning",
+    detail:
+      "Click Run Agent. Qwen classifies intent, urgency, missing information, and the next best action.",
+    target: "lead",
+    cue: "The model is not only writing. It is turning an ambiguous message into a structured workflow decision."
+  },
+  {
+    id: 3,
+    label: "Memory",
+    title: "Retrieve only relevant memories",
+    detail:
+      "Point to pricing guardrails, ICP fit, tone preference, and human approval rules.",
+    target: "memory",
+    cue: "Memory makes the agent safer and more useful because it remembers business rules within a limited context window."
+  },
+  {
+    id: 4,
+    label: "Approval",
+    title: "Hold important actions for the owner",
+    detail:
+      "Show the approval queue. Pricing, quotes, and uncertain replies do not go out automatically.",
+    target: "approval",
+    cue: "This is the production-readiness layer: autonomous drafting with human control at the decision point."
+  },
+  {
+    id: 5,
+    label: "Trace",
+    title: "Make the agent auditable",
+    detail:
+      "Show the trace. Judges can see capture, qualification, memory retrieval, drafting, approval, and learning.",
+    target: "trace",
+    cue: "A judge should never have to guess what the agent did. The trace explains the workflow."
+  },
+  {
+    id: 6,
+    label: "Usage",
+    title: "Expose Qwen Cloud usage",
+    detail:
+      "Show the usage ledger and token metrics. Cloud usage is visible, measurable, and budget-aware.",
+    target: "usage",
+    cue: "The app proves Qwen Cloud is powering the agent, and it treats token spend as part of the product."
+  },
+  {
+    id: 7,
+    label: "Advisor",
+    title: "End with AI Revenue Advisor",
+    detail:
+      "Run or show Advisor Mode. Qwen reviews the whole inbox and recommends the next business move.",
+    target: "advisor",
+    cue: "The product graduates from reply assistant to revenue autopilot and advisory layer."
+  }
+];
+
+const proofBadges = [
+  "Qwen Cloud reasoning",
+  "Persistent memory",
+  "Human approval",
+  "Agent trace",
+  "Usage ledger",
+  "Alibaba proof ready",
+  "MIT license"
+];
+
 function App() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [memories, setMemories] = useState<BusinessMemory[]>([]);
@@ -68,6 +158,8 @@ function App() {
   const [isRunning, setIsRunning] = useState(false);
   const [isAdvisorRunning, setIsAdvisorRunning] = useState(false);
   const [advisorRun, setAdvisorRun] = useState<AdvisorRun | null>(null);
+  const [isDemoMode, setIsDemoMode] = useState(false);
+  const [activeDemoStep, setActiveDemoStep] = useState(0);
   const [error, setError] = useState<string>("");
 
   useEffect(() => {
@@ -97,6 +189,23 @@ function App() {
     [runs, selectedLead?.id]
   );
   const selectedMemories = latestRun?.result.memoryUsed ?? memories.slice(0, 4);
+  const currentDemoStep = demoSteps[activeDemoStep];
+
+  const demoTargetClass = (target: DemoTarget) =>
+    isDemoMode && currentDemoStep.target === target ? "demo-highlight" : "";
+
+  const activateDemoMode = () => {
+    setIsDemoMode((current) => {
+      const next = !current;
+      if (next) {
+        setActiveDemoStep(0);
+        const whatsappLead = leads.find((lead) => getLeadChannel(lead.source) === "WhatsApp");
+        setSelectedChannel("WhatsApp");
+        if (whatsappLead) setSelectedLeadId(whatsappLead.id);
+      }
+      return next;
+    });
+  };
 
   const runAgent = async () => {
     if (!selectedLead) return;
@@ -193,6 +302,14 @@ function App() {
           <span>Track 4: Autopilot Agent</span>
           <span>Memory depth enabled</span>
           <span>Alibaba Cloud proof-ready backend</span>
+          <button
+            className={`demo-toggle ${isDemoMode ? "active" : ""}`}
+            onClick={activateDemoMode}
+            type="button"
+          >
+            <PlayCircle size={15} />
+            Judge Demo
+          </button>
         </div>
       </header>
 
@@ -210,10 +327,61 @@ function App() {
         </button>
       </section>
 
+      <section className={`proof-badge-strip ${demoTargetClass("proof")}`} aria-label="Hackathon proof badges">
+        {proofBadges.map((badge) => (
+          <span key={badge}>
+            <CheckCircle2 size={15} />
+            {badge}
+          </span>
+        ))}
+      </section>
+
       {error && <div className="error-banner">{error}</div>}
 
+      {isDemoMode && (
+        <section className="demo-command-panel">
+          <div className="demo-command-copy">
+            <span>Judge Demo Mode</span>
+            <h2>{currentDemoStep.title}</h2>
+            <p>{currentDemoStep.detail}</p>
+            <blockquote>{currentDemoStep.cue}</blockquote>
+          </div>
+          <div className="demo-step-list">
+            {demoSteps.map((step, index) => (
+              <button
+                className={index === activeDemoStep ? "active" : ""}
+                key={step.id}
+                onClick={() => setActiveDemoStep(index)}
+                type="button"
+              >
+                <strong>{step.id}</strong>
+                <span>{step.label}</span>
+              </button>
+            ))}
+          </div>
+          <div className="demo-command-actions">
+            <button
+              disabled={activeDemoStep === 0}
+              onClick={() => setActiveDemoStep((step) => Math.max(0, step - 1))}
+              type="button"
+            >
+              <ChevronLeft size={16} />
+              Back
+            </button>
+            <button
+              disabled={activeDemoStep === demoSteps.length - 1}
+              onClick={() => setActiveDemoStep((step) => Math.min(demoSteps.length - 1, step + 1))}
+              type="button"
+            >
+              Next
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        </section>
+      )}
+
       <section className="workspace-grid">
-        <aside className="panel inbox-panel">
+        <aside className={`panel inbox-panel ${demoTargetClass("inbox")}`}>
           <PanelTitle icon={<Inbox size={18} />} title="Inbound Inbox" detail="Seeded demo leads" />
           <div className="channel-filter" aria-label="Lead source filters">
             {channels.map((channel) => (
@@ -251,7 +419,7 @@ function App() {
           </div>
         </aside>
 
-        <section className="panel lead-panel">
+        <section className={`panel lead-panel ${demoTargetClass("lead")} ${demoTargetClass("memory")}`}>
           <PanelTitle
             icon={<MessageSquareText size={18} />}
             title="Selected Lead"
@@ -293,7 +461,7 @@ function App() {
           </div>
         </section>
 
-        <section className="panel result-panel">
+        <section className={`panel result-panel ${demoTargetClass("approval")}`}>
           <PanelTitle
             icon={<ShieldCheck size={18} />}
             title="Approval Queue"
@@ -344,7 +512,7 @@ function App() {
       </section>
 
       <section className="lower-grid">
-        <section className="panel trace-panel">
+        <section className={`panel trace-panel ${demoTargetClass("trace")}`}>
           <PanelTitle icon={<Activity size={18} />} title="Agent Trace" detail="Judge-visible workflow" />
           <div className="trace-list">
             {(latestRun?.trace ?? []).map((step, index) => (
@@ -360,7 +528,7 @@ function App() {
           </div>
         </section>
 
-        <section className="panel token-panel">
+        <section className={`panel token-panel ${demoTargetClass("usage")}`}>
           <PanelTitle icon={<Clock3 size={18} />} title="Token + Control Metrics" detail="Budget guardrail" />
           <div className="metric-grid">
             <Metric label="Prompt tokens" value={latestRun?.tokenUsage.promptTokens ?? 0} />
@@ -375,7 +543,7 @@ function App() {
         </section>
       </section>
 
-      <section className="panel advisor-panel">
+      <section className={`panel advisor-panel ${demoTargetClass("advisor")}`}>
         <PanelTitle
           icon={<Siren size={18} />}
           title="AI Revenue Advisor"
@@ -445,7 +613,7 @@ function App() {
         </div>
       </section>
 
-      <section className="panel qwen-usage-panel">
+      <section className={`panel qwen-usage-panel ${demoTargetClass("usage")}`}>
         <PanelTitle
           icon={<Sparkles size={18} />}
           title="Qwen Cloud Usage Ledger"
