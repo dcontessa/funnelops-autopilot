@@ -41,6 +41,12 @@ Open the Vite URL, usually `http://localhost:5173`.
 
 If `QWEN_API_KEY` is missing, the app uses a clearly labeled fallback agent result so the UI can still be tested without exposing credentials.
 
+For a static frontend deployment, set:
+
+```bash
+VITE_API_BASE_URL=https://funneloutopilot-gbbnrquvwd.cn-hangzhou.fcapp.run
+```
+
 ## Scripts
 
 ```bash
@@ -69,9 +75,11 @@ Detailed architecture notes are in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md
 
 ## Submission Assets
 
+- User-facing app: GitHub Pages deployment from `.github/workflows/pages.yml`
+- Alibaba Cloud backend proof: `https://funneloutopilot-gbbnrquvwd.cn-hangzhou.fcapp.run/api/health`
 - Devpost draft: [`outputs/devpost-project-details-draft.md`](outputs/devpost-project-details-draft.md)
 - Architecture: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
-- Alibaba Cloud proof notes: [`docs/ALIBABA_CLOUD_PROOF.md`](docs/ALIBABA_CLOUD_PROOF.md)
+- Alibaba Cloud deployment proof: [`DEPLOYMENT.md`](DEPLOYMENT.md)
 - Demo script: [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md)
 - Submission checklist: [`docs/SUBMISSION_CHECKLIST.md`](docs/SUBMISSION_CHECKLIST.md)
 
@@ -84,7 +92,7 @@ Detailed architecture notes are in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md
 
 ## Alibaba Cloud Proof Plan
 
-The backend will be deployed on Alibaba Cloud. The main code file demonstrating Qwen Cloud API usage is [`src/lib/qwen.ts`](src/lib/qwen.ts). See [`docs/ALIBABA_CLOUD_PROOF.md`](docs/ALIBABA_CLOUD_PROOF.md) for the proof plan.
+The backend is deployed on Alibaba Cloud Function Compute. The deployment adapter is [`deploy/app.py`](deploy/app.py), and the proof notes are in [`DEPLOYMENT.md`](DEPLOYMENT.md).
 
 ## License
 

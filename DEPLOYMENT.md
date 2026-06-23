@@ -13,6 +13,8 @@ This file documents the deployment path used for the FunnelOps Autopilot hackath
 - Public URL: `https://funneloutopilot-gbbnrquvwd.cn-hangzhou.fcapp.run`
 - Health check: `https://funneloutopilot-gbbnrquvwd.cn-hangzhou.fcapp.run/api/health`
 
+Important: Alibaba Cloud's default Function Compute domain forces `Content-Disposition: attachment` for browser visits, so the default domain is used as backend proof, not as the primary user-facing app URL. The user-facing app is deployed separately as a static frontend and calls this Alibaba backend through `VITE_API_BASE_URL`.
+
 Verified live health response:
 
 ```json
@@ -52,7 +54,7 @@ The deployed adapter tries the configured hackathon model first, then falls back
 ```mermaid
 flowchart LR
   Browser[React frontend] --> FC[Alibaba Cloud Function Compute]
-  FC --> Static[Static Vite assets]
+  StaticHost[Static frontend host] --> Browser
   FC --> API[Python HTTP API]
   API --> Qwen[Qwen Cloud Model Studio API]
   API --> Memory[In-memory demo leads, memories, workflow runs]

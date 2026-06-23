@@ -35,8 +35,10 @@ type BootstrapPayload = {
   usageSummary: UsageSummary;
 };
 
+const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/, "");
+
 const api = async <T,>(path: string, options?: RequestInit): Promise<T> => {
-  const response = await fetch(path, {
+  const response = await fetch(`${apiBaseUrl}${path}`, {
     headers: { "Content-Type": "application/json" },
     ...options
   });
