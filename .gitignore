@@ -7,3 +7,7 @@ dist
 *.log
 coverage
 work/runtime
+deploy/*.zip
+deploy/server.cjs
+deploy/fc-python-package
+deploy/__pycache__

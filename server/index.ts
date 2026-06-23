@@ -1,7 +1,7 @@
 import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { buildFallbackAdvisorReport, normalizeQwenAdvisorReport } from "../src/lib/advisor";
 import {
   createWorkflowRun,
@@ -19,6 +19,7 @@ dotenv.config();
 
 const app = express();
 const port = Number(process.env.PORT ?? 8787);
+const staticDir = resolve(process.cwd(), "dist");
 const runStore = new FileWorkflowRunStore(join(process.cwd(), "work", "runtime", "workflow-runs.json"));
 
 const leads = new Map<string, Lead>(seedLeads.map((lead) => [lead.id, { ...lead }]));
@@ -35,6 +36,7 @@ const hydrateRuns = async () => {
 
 app.use(cors());
 app.use(express.json());
+app.use(express.static(staticDir));
 
 app.get("/api/health", (_req, res) => {
   res.json({
@@ -255,6 +257,15 @@ app.post("/api/advisor/run", async (_req, res) => {
       tokenUsage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 }
     }
   });
+});
+
+app.use((req, res, next) => {
+  if (req.method === "GET" && !req.path.startsWith("/api/")) {
+    res.sendFile(join(staticDir, "index.html"));
+    return;
+  }
+
+  next();
 });
 
 hydrateRuns()

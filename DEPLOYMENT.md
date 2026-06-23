@@ -1,105 +1,19 @@
-# Alibaba Cloud Deployment Proof Plan
+# Alibaba Cloud Deployment Proof
 
-This file is the submission-facing place to document how FunnelOps Autopilot runs on Alibaba Cloud.
+This file documents the deployment path used for the FunnelOps Autopilot hackathon submission.
 
-## Current Status
+## Live Deployment
 
-Local vertical slice is working. Qwen Cloud calls have been verified locally. The backend is packaged for container-style deployment with `Dockerfile`.
+- Alibaba Cloud service: Function Compute 3.0
+- Region: China (Hangzhou)
+- Function name: `funnelops-autopilot`
+- Runtime: Custom Runtime (Debian 10), Python 3.10
+- Startup command: `python3 app.py`
+- Listening port: `8787`
+- Public URL: `https://funneloutopilot-gbbnrquvwd.cn-hangzhou.fcapp.run`
+- Health check: `https://funneloutopilot-gbbnrquvwd.cn-hangzhou.fcapp.run/api/health`
 
-## Target Backend Requirement
-
-The hackathon requires proof that the backend is running on Alibaba Cloud. The proof package should include:
-
-- A short screen recording of the deployed backend running on Alibaba Cloud.
-- A public repository link to code that demonstrates Alibaba Cloud service/API usage.
-- Environment variable setup without exposing secrets.
-- A health endpoint that confirms the backend is alive.
-
-## Planned Deployment Shape
-
-```mermaid
-flowchart LR
-  Browser[React frontend] --> Backend[Node/Express API on Alibaba Cloud]
-  Backend --> Qwen[Qwen Cloud API]
-  Backend --> Store[Workflow and memory storage]
-```
-
-## Recommended Alibaba Cloud Path
-
-Recommended service: Alibaba Cloud Function Compute with a Custom Container HTTP function.
-
-The simplest acceptable proof target is a public backend URL that serves:
-
-```http
-GET /api/health
-```
-
-For hackathon proof, the first deployment does not need a custom domain. A generated Alibaba Cloud service URL is enough if it is public and testable.
-
-Why this path:
-
-- Function Compute is fully managed and avoids setting up a long-running VM.
-- Custom Container functions can run an Express HTTP backend.
-- Alibaba Cloud documentation says custom container functions should use an image from Alibaba Cloud Container Registry in the same region and account.
-- For ARM-based local machines, build images with `--platform linux/amd64` before pushing to Alibaba Cloud Container Registry.
-
-## Production Start Command
-
-```bash
-npm start
-```
-
-This runs:
-
-```bash
-tsx server/index.ts
-```
-
-## Container Build
-
-```bash
-docker build --platform linux/amd64 -t funnelops-autopilot .
-docker run --rm -p 8787:8787 \
-  -e QWEN_API_KEY=your_key_here \
-  -e QWEN_BASE_URL=https://dashscope-intl.aliyuncs.com/compatible-mode/v1 \
-  -e QWEN_MODEL=qwen3.7-plus \
-  funnelops-autopilot
-```
-
-Then test:
-
-```bash
-curl http://localhost:8787/api/health
-```
-
-## Function Compute Settings
-
-Use these values when creating the Function Compute custom container function:
-
-- Handler type: HTTP request handler.
-- Container image: image pushed to Alibaba Cloud Container Registry.
-- Listening port: `8787`.
-- Start command: leave blank if the image uses the Dockerfile CMD, or set `npm start`.
-- Public access: enable HTTP access so judges can open the generated endpoint.
-- Environment variables:
-  - `QWEN_API_KEY`
-  - `QWEN_BASE_URL`
-  - `QWEN_MODEL`
-  - `PORT=8787`
-
-## Alibaba Cloud References
-
-- Function Compute overview: https://www.alibabacloud.com/help/en/functioncompute/fc-2-0/product-overview/what-is-function-compute
-- Create a Custom Container function: https://help.aliyun.com/en/functioncompute/fc-2-0/user-guide/create-a-custom-container-function
-- Manage functions and HTTP handlers: https://www.alibabacloud.com/help/en/functioncompute/fc-2-0/user-guide/manage-functions
-
-## Backend Health Endpoint
-
-```http
-GET /api/health
-```
-
-Expected response:
+Verified live health response:
 
 ```json
 {
@@ -109,31 +23,91 @@ Expected response:
 }
 ```
 
-## Secrets
+## Qwen Cloud Usage Proof
 
-Required deployment secret:
+The deployed backend calls Qwen Cloud through Alibaba Cloud Model Studio's OpenAI-compatible API.
 
-```bash
-QWEN_API_KEY=...
-QWEN_BASE_URL=https://dashscope-intl.aliyuncs.com/compatible-mode/v1
-QWEN_MODEL=qwen3.7-plus
+Environment variables configured in Function Compute:
+
+- `QWEN_API_KEY`
+- `QWEN_BASE_URL=https://dashscope-intl.aliyuncs.com/compatible-mode/v1`
+- `QWEN_MODEL=qwen3.7-plus`
+- `PORT=8787`
+
+Secrets are configured in Alibaba Cloud only and are not committed to the repository.
+
+The deployed adapter tries the configured hackathon model first, then falls back to available Qwen models if the selected model is unavailable for the account. A live test from Function Compute successfully invoked Qwen:
+
+```json
+{
+  "provider": "qwen",
+  "endpoint": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+  "model": "qwen-plus",
+  "totalTokens": 1482
+}
 ```
 
-Do not commit this value.
+## Architecture
+
+```mermaid
+flowchart LR
+  Browser[React frontend] --> FC[Alibaba Cloud Function Compute]
+  FC --> Static[Static Vite assets]
+  FC --> API[Python HTTP API]
+  API --> Qwen[Qwen Cloud Model Studio API]
+  API --> Memory[In-memory demo leads, memories, workflow runs]
+  API --> Approval[Human approval checkpoint]
+```
+
+## Deployment Code
+
+The Function Compute adapter lives at:
+
+```text
+deploy/app.py
+```
+
+It provides:
+
+- `GET /api/health`
+- `GET /api/bootstrap`
+- `POST /api/agent/run`
+- `POST /api/advisor/run`
+- `POST /api/runs/:id/decision`
+- Static frontend serving from `dist`
+
+## Build Package
+
+Build the frontend:
+
+```bash
+npm run build
+```
+
+Create the Function Compute zip locally:
+
+```bash
+mkdir -p deploy/fc-python-package
+cp deploy/app.py deploy/fc-python-package/app.py
+cp -R dist deploy/fc-python-package/dist
+cd deploy/fc-python-package
+zip -qr ../funnelops-fc-python.zip app.py dist
+```
+
+Upload `deploy/funnelops-fc-python.zip` to Function Compute using **Upload ZIP Package**, then deploy.
 
 ## Proof Recording Checklist
 
 Record a short video showing:
 
-1. Alibaba Cloud service page.
-2. Environment variable names configured without exposing secret values.
-3. Public backend URL.
-4. `/api/health` response.
-5. One FunnelOps agent or advisor call using the deployed backend.
+1. Alibaba Cloud Function Compute page for `funnelops-autopilot`.
+2. Runtime: Custom Runtime (Debian 10), Python 3.10.
+3. Startup command: `python3 app.py`.
+4. Public URL enabled.
+5. Environment variable names present without exposing `QWEN_API_KEY`.
+6. `GET /api/health` returning `providerReady: true`.
+7. One `POST /api/agent/run` call showing provider `qwen` and token usage.
 
-## TODO Before Submission
+## Notes For Judges
 
-- Choose exact Alibaba Cloud service.
-- Add proof screenshot or recording link.
-- Add deployed backend URL.
-- Add repo link to the service configuration or deployment code.
+FunnelOps Autopilot is submitted under Track 4: Autopilot Agent. It also demonstrates MemoryAgent-style behavior through memory scoring, selected memory retrieval, stale-memory fallback, and human approval before high-impact customer actions.
