@@ -203,7 +203,19 @@ function App() {
     () => runs.find((run) => run.leadId === selectedLead?.id),
     [runs, selectedLead?.id]
   );
-  const selectedMemories = latestRun?.result.memoryUsed ?? memories.slice(0, 4);
+  const selectedMemories = useMemo(() => {
+    const rawMemories = latestRun?.result.memoryUsed ?? memories.slice(0, 4);
+    const resolved = rawMemories
+      .map((memory) => {
+        if (typeof memory === "string") return memories.find((item) => item.id === memory);
+        if (memory?.title) return memory;
+        return memories.find((item) => item.id === memory?.id);
+      })
+      .filter((memory): memory is BusinessMemory => Boolean(memory?.title));
+
+    return resolved.length > 0 ? resolved : memories.slice(0, 4);
+  }, [latestRun?.result.memoryUsed, memories]);
+  const selectedMemoryIds = new Set(selectedMemories.map((memory) => memory.id));
   const currentDemoStep = demoSteps[activeDemoStep];
 
   const demoTargetClass = (target: DemoTarget) =>
@@ -608,9 +620,7 @@ function App() {
         <div className="memory-ops-grid">
           {memories.map((memory) => {
             const score = memoryScores.find((item) => item.memoryId === memory.id);
-            const selected = latestRun
-              ? latestRun.result.memoryUsed.some((item) => item.id === memory.id)
-              : score?.selected;
+            const selected = latestRun ? selectedMemoryIds.has(memory.id) : score?.selected;
 
             return (
               <article className={`memory-ops-card ${selected ? "memory-selected" : ""}`} key={memory.id}>
