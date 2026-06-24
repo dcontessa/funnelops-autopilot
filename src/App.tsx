@@ -32,7 +32,7 @@ type BootstrapPayload = {
   memories: BusinessMemory[];
   memoryScores: MemoryScore[];
   runs: WorkflowRun[];
-  usageSummary: UsageSummary;
+  usageSummary: Partial<UsageSummary> & { runs?: number };
 };
 
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/, "");
@@ -46,6 +46,19 @@ const api = async <T,>(path: string, options?: RequestInit): Promise<T> => {
   if (!response.ok) throw new Error(`Request failed: ${response.status}`);
   return response.json() as Promise<T>;
 };
+
+const asNumber = (value: unknown) => (typeof value === "number" && Number.isFinite(value) ? value : 0);
+
+const normalizeUsageSummary = (
+  summary: BootstrapPayload["usageSummary"] | undefined
+): UsageSummary => ({
+  totalRuns: asNumber(summary?.totalRuns ?? summary?.runs),
+  qwenRuns: asNumber(summary?.qwenRuns),
+  fallbackRuns: asNumber(summary?.fallbackRuns),
+  promptTokens: asNumber(summary?.promptTokens),
+  completionTokens: asNumber(summary?.completionTokens),
+  totalTokens: asNumber(summary?.totalTokens)
+});
 
 const statusLabel: Record<Lead["status"], string> = {
   new: "New",
@@ -171,7 +184,7 @@ function App() {
         setMemories(payload.memories);
         setMemoryScores(payload.memoryScores);
         setRuns(payload.runs);
-        setUsageSummary(payload.usageSummary);
+        setUsageSummary(normalizeUsageSummary(payload.usageSummary));
         setSelectedLeadId(payload.leads[0]?.id ?? "");
       })
       .catch(() => setError("Could not load demo workspace."));
@@ -687,7 +700,7 @@ function Metric({ label, value }: { label: string; value: number }) {
   return (
     <div className="metric">
       <span>{label}</span>
-      <strong>{value.toLocaleString()}</strong>
+      <strong>{asNumber(value).toLocaleString()}</strong>
     </div>
   );
 }
